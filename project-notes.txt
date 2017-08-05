@@ -1,1 +1,10 @@
 ColorsInteract
+=========================
+
+- Small-ish board.
+- Bunch of shapes that are colors. They can move around but not off of the board.
+- When they overlap they become less opaque so you can see the mix of colors in the overlapping region
+- start with squares but want to be able to put other shapes in too.
+- Server should just manage the game-state between the clients.
+- Clients should handle all of the drawing. 
+- Clents only react to new info from the server. E.G. I move, don't move immediately, wait for info to come from server.
