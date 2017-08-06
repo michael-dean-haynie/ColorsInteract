@@ -17,6 +17,50 @@ function Client(id, connection){
   this.connection = connection;
 }
 
+
+
+
+
+
+
+
+function Player(name, id){
+  this.name = name;
+  this.id = id;
+}
+
+function Offset(x, y){
+  this.x = x;
+  this.y = y;
+}
+
+function Piece(playerId, color, offset){
+  this.playerId = playerId;
+  this.color = color;
+  this.offset = offset;
+}
+
+function GameState(players, pieces){
+  this.timestamp = Date.now(); // miliseconds since unix epoch
+  this.players = [];
+  this.pieces = [];
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // create a webserver
 var httpServer = http.createServer(function (req, resp){});
 httpServer.listen(1234, '127.0.0.1', function(){

@@ -15,3 +15,12 @@ Phase One
 =========================
 - Get multiple clients receiving information from eachother in real time (via the server)
   - Probably just text for now
+
+Phase Two
+=========================
+- Lay out game state communication rules
+  - Server needs to have all the current game state info to give to new clients
+  - Start with server just marking game-state as dirty, telling all the clients "hey, I have new stuff. so scrap everything you had and rebuild using this new info"
+    - Probably do that with a game-state timestamp and just check on the client for newer stuff
+  - Not really a good way to share types between the server and the client so I'll have that seperate. Have the server stuff focus on values not operations.
+  - Get the clients/server communicating gamestate changes. No actual client drawing yet.
