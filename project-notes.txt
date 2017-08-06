@@ -7,4 +7,11 @@ ColorsInteract
 - start with squares but want to be able to put other shapes in too.
 - Server should just manage the game-state between the clients.
 - Clients should handle all of the drawing. 
-- Clents only react to new info from the server. E.G. I move, don't move immediately, wait for info to come from server.
+- Clents only react to new info from the server. E.G. I move, don't move immediately, wait for info to come from server.  
+
+
+
+Phase One
+=========================
+- Get multiple clients receiving information from eachother in real time (via the server)
+  - Probably just text for now
