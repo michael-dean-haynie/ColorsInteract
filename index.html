@@ -1,0 +1,15 @@
+<div id='chatlog'></div>
+<input id='message' type='text'>
+<input type='button' value='Post' onclick='sendMessage();'>
+
+<script>
+var ws = new WebSocket('ws://localhost:1234', 'echo-protocol');
+function sendMessage(){
+  var message = document.getElementById('message').value;
+  ws.send(message);
+}
+ws.addEventListener("message", function(e) {
+  var msg = e.data;
+  document.getElementById('chatlog').innerHTML += '<br>' + msg;
+});
+</script>
