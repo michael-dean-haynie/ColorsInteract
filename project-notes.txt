@@ -24,3 +24,16 @@ Phase Two
     - Probably do that with a game-state timestamp and just check on the client for newer stuff
   - Not really a good way to share types between the server and the client so I'll have that seperate. Have the server stuff focus on values not operations.
   - Get the clients/server communicating gamestate changes. No actual client drawing yet.
+
+
+Phase Three
+=========================
+ - Client side.
+ - Read the server messages into client side Game state / chat state objects
+ - Paint the board
+
+
+
+Don't Forget To... 
+=========================
+Check that name is not null on update player name

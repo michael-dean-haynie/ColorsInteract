@@ -2,7 +2,59 @@
 <input type='button' value='Submit' onclick='addPlayer();'>
 
 <script>
+// custom client types
+function Player(id, name){
+  this.id = id;
+  this.name = name;
+}
+
+function Offset(x, y){
+  this.x = x;
+  this.y = y;
+}
+
+function Piece(playerId, offset, color){
+  this.playerId = playerId;
+  this.offset = offset;
+  this.color = color;
+}
+
+function Board(width, height, pieceSize){
+  // these are arbitrary units. should figure out the actual pizles on the device
+  this.width = width;
+  this.height = height;
+  this.pieceSize = pieceSize;
+}
+
+function GameState(timestamp, board, players, pieces){
+  this.timestamp = timestamp;
+  this.board = board;
+  this.players = players;
+  this.pieces = pieces;
+}
+
+// init web socket
 var ws = new WebSocket('ws://localhost:1234', 'echo-protocol');
+
+// init global variables
+CGS = new GameState(); // client/current game state
+
+ws.addEventListener("message", function(e) {
+  var msgObj = JSON.parse(e.data);
+  switch(msgObj.msgType){
+    case 'new-game-state':
+      var SGS = msgObj.GS; // server game state
+
+      // put together client/current game state
+      var board = new Board(SGS.board.width, SGS.board.height, SGS.board.pieceSize);
+      var players = SGS.players.map(p => new Player(p.id, p.name));
+      var pieces = SGS.pieces.map(p => new Piece(p.playerId, new Offset(p.offset.x, p.offset.y), p.color));
+      CGS = new GameState(SGS.timestamp, board, players, pieces);
+      console.log(CGS);
+    break;
+  }
+
+});
 
 function addPlayer(){
   var name = document.getElementById('player-name').value;
