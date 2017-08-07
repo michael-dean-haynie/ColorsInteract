@@ -1,15 +1,18 @@
-<div id='chatlog'></div>
-<input id='message' type='text'>
-<input type='button' value='Post' onclick='sendMessage();'>
+<input id='player-name' type='text' placeholder='What&#39;s your name?'>
+<input type='button' value='Submit' onclick='addPlayer();'>
 
 <script>
 var ws = new WebSocket('ws://localhost:1234', 'echo-protocol');
-function sendMessage(){
-  var message = document.getElementById('message').value;
-  ws.send(message);
+
+function addPlayer(){
+  var name = document.getElementById('player-name').value;
+  var msgObj = {'msgType': 'add-player', 'name': name};
+  ws.send(JSON.stringify(msgObj));
 }
-ws.addEventListener("message", function(e) {
-  var msg = e.data;
-  document.getElementById('chatlog').innerHTML += '<br>' + msg;
-});
+
+function movePiece(direction){
+  var msgObj = {'msgType': 'move-piece', 'direction': direction};
+  ws.send(JSON.stringify(msgObj));
+}
+
 </script>
