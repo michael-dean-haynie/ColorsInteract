@@ -36,4 +36,12 @@ Phase Three
 
 Don't Forget To... 
 =========================
-Check that name is not null on update player name
+- Check that name is not null on update player name
+- Remove player/piece when connection closes
+- adjust speed of movement (move more than a unit at a time)
+- Add button to rejoin
+- maybe space makes you bigger
+- get server to return index.html so I can browse to it from another machine.
+- Show names
+- Add chat
+- board should be live in the back while name prompt is up (it is but it needs to get started)

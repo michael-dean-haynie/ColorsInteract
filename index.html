@@ -1,70 +1,76 @@
-<input id='player-name' type='text' placeholder='What&#39;s your name?'>
-<input type='button' value='Submit' onclick='addPlayer();'>
+<!DOCTYPE html>
+<html>
+<head>
+  <link type='text/css' rel='stylesheet' href='./client-assets/style.css'/>
+</head>
+<body>
+  <div id='player-name-markup'>
+    <form onsubmit='addPlayer(); return false;'>
+      <input id='player-name' type='text' placeholder='What&#39;s your name?' required>
+      <input type='button' value='Get Started!' onclick='addPlayer(); return false;'>
+    </form>
+  </div>
 
-<script>
-// custom client types
-function Player(id, name){
-  this.id = id;
-  this.name = name;
-}
+  <div class='canvas-container'>
+    <canvas id='canvas' height='700' width='700'></canvas>
+  </div>
 
-function Offset(x, y){
-  this.x = x;
-  this.y = y;
-}
+  <script src='./client-assets/custom-types.js'></script>
+  <script>
+  // auto focus on name input
+  var input = document.getElementById('player-name');
+  input.focus();
+  input.select();
 
-function Piece(playerId, offset, color){
-  this.playerId = playerId;
-  this.offset = offset;
-  this.color = color;
-}
-
-function Board(width, height, pieceSize){
-  // these are arbitrary units. should figure out the actual pizles on the device
-  this.width = width;
-  this.height = height;
-  this.pieceSize = pieceSize;
-}
-
-function GameState(timestamp, board, players, pieces){
-  this.timestamp = timestamp;
-  this.board = board;
-  this.players = players;
-  this.pieces = pieces;
-}
-
-// init web socket
-var ws = new WebSocket('ws://localhost:1234', 'echo-protocol');
-
-// init global variables
-CGS = new GameState(); // client/current game state
-
-ws.addEventListener("message", function(e) {
-  var msgObj = JSON.parse(e.data);
-  switch(msgObj.msgType){
-    case 'new-game-state':
-      var SGS = msgObj.GS; // server game state
-
-      // put together client/current game state
-      var board = new Board(SGS.board.width, SGS.board.height, SGS.board.pieceSize);
-      var players = SGS.players.map(p => new Player(p.id, p.name));
-      var pieces = SGS.pieces.map(p => new Piece(p.playerId, new Offset(p.offset.x, p.offset.y), p.color));
-      CGS = new GameState(SGS.timestamp, board, players, pieces);
-      console.log(CGS);
-    break;
+  // listen for key action
+  document.onkeydown = function(e){
+    if(e.keyCode == 38) {movePiece('u');}
+    if(e.keyCode == 39) {movePiece('r');}
+    if(e.keyCode == 40) {movePiece('d');}
+    if(e.keyCode == 37) {movePiece('l');}
   }
 
-});
+  // init web socket
+  var ws = new WebSocket('ws://localhost:1234', 'echo-protocol');
 
-function addPlayer(){
-  var name = document.getElementById('player-name').value;
-  var msgObj = {'msgType': 'add-player', 'name': name};
-  ws.send(JSON.stringify(msgObj));
-}
+  // init global variables
+  CGS = new GameState(); // client/current game state
+  var CPS = 700; // canvas pixel size: equal to the <canvas> width and height attribute values (their the same)
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
 
-function movePiece(direction){
-  var msgObj = {'msgType': 'move-piece', 'direction': direction};
-  ws.send(JSON.stringify(msgObj));
-}
+  ws.addEventListener("message", function(e) {
+    var msgObj = JSON.parse(e.data);
+    switch(msgObj.msgType){
+      case 'new-game-state':
+        var SGS = msgObj.GS; // server game state
 
-</script>
+        // put together client/current game state
+        var board = new Board(SGS.board.size, SGS.board.pieceSize);
+        var players = SGS.players.map(p => new Player(p.id, p.name));
+        var pieces = SGS.pieces.map(p => new Piece(p.playerId, new Offset(p.offset.x, p.offset.y), p.color));
+        CGS = new GameState(SGS.timestamp, board, players, pieces);
+
+        // paint board
+        CGS.board.paint();
+
+      break;
+    }
+
+  });
+
+  function addPlayer(){
+    var name = document.getElementById('player-name').value;
+    var msgObj = {'msgType': 'add-player', 'name': name};
+    ws.send(JSON.stringify(msgObj));
+    document.getElementById('player-name-markup').remove();
+  }
+
+  function movePiece(direction){
+    var msgObj = {'msgType': 'move-piece', 'direction': direction};
+    ws.send(JSON.stringify(msgObj));
+  }
+
+  </script>
+</body>
+</html>

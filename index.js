@@ -40,18 +40,18 @@ function Offset(x, y){
 function Piece(playerId, offset, color){
   this.playerId = playerId;
   this.offset = offset;
-  this.color = color || '#' + Math.floor(Math.random()*16777215).toString(16); // random hex color
+  // random rgb color with set alpha
+  this.color = color || 'rgba(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ', 0.33)';
 }
 
 function Board(){
   // these are arbitrary units. should figure out the actual pizles on the device
-  this.width = 100;
-  this.height = 100;
+  this.size = 100;
   this.pieceSize = 5;
 
   this.getRandomStartingOffset = function(){
-    var maxX = this.width - this.pieceSize;
-    var maxY = this.height - this.pieceSize;
+    var maxX = this.size - this.pieceSize;
+    var maxY = this.size - this.pieceSize;
     var x = Math.floor(Math.random() * (maxX + 1));
     var y = Math.floor(Math.random() * (maxY + 1));
     return new Offset(x, y);
@@ -115,8 +115,8 @@ function GameState(players, pieces){
     }
 
     var corners = this.board.calculateCorners(to);
-    var badCorners = corners.filter(c => (c.x < 0) || (c.x > this.board.width) ||
-                                         (c.y < 0) || (c.y > this.board.height));
+    var badCorners = corners.filter(c => (c.x < 0) || (c.x > this.board.size) ||
+                                         (c.y < 0) || (c.y > this.board.size));
     if (badCorners.length == 0){
       this.updatePiece(new Piece(cp.playerId, to, cp.color));
     }
