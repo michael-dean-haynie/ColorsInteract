@@ -1,22 +1,155 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <link type='text/css' rel='stylesheet' href='./client-assets/style.css'/>
+  <!-- <link type='text/css' rel='stylesheet' href='./client-assets/style.css'/> -->
+  <style>
+    html{
+      padding:0;
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+    }
+    body{
+      padding:0;
+      margin:0;
+      background-color: rgb(119,199,224);
+    }
+    .canvas-container{
+      padding:20px;
+      text-align:center;
+      padding-top:50px;
+    }
+
+    #canvas{
+      display:inline-block;
+      background-color:white;
+      box-shadow: 10px 10px 20px rgb(0,189,214);
+      margin-bottom: 20px;
+    }
+
+    #player-name-markup{
+      text-align:center;
+      position:fixed;
+      top:250px;
+      width:100%;
+      height:150px;
+      padding-top:70px;
+      box-sizing:border-box;
+      background-color:rgba(18, 130, 165, .5);
+    }
+    .info{
+      display:inline-block;
+      width:700px;
+      text-align:left;
+    }
+
+    .player-info{
+      display:inline-block;
+      background-color:white;
+      padding:2px 4px 0px 3px;
+      margin-bottom:5px;
+    }
+
+    .player-info .player-info-color{
+      display:inline-block;
+      height:12px;
+      width:12px;
+    }
+
+    .player-info .player-info-name{
+      display:inline-block;
+    }
+  </style>
 </head>
 <body>
   <div id='player-name-markup'>
-    <form onsubmit='addPlayer(); return false;'>
+    <form id='player-name-form' onsubmit='addPlayer(); return false;'>
       <input id='player-name' type='text' placeholder='What&#39;s your name?' required>
-      <input type='button' value='Get Started!' onclick='addPlayer(); return false;'>
     </form>
   </div>
 
   <div class='canvas-container'>
+    <div class='info'>
+      <div id='players'>
+      </div>
+    </div>
     <canvas id='canvas' height='700' width='700'></canvas>
   </div>
 
-  <script src='./client-assets/custom-types.js'></script>
-  <script>
+  <!-- <script src='./client-assets/custom-types.js'></script> -->
+  <script name='custom-types'>
+    function Player(id, name){
+      this.id = id;
+      this.name = name;
+    }
+
+    function Offset(x, y){
+      this.x = x;
+      this.y = y;
+    }
+
+    function Piece(playerId, offset, color){
+      this.playerId = playerId;
+      this.offset = offset;
+      this.color = color;
+    }
+
+    function Board(size, pieceSize, pieceSpeed){
+      // these are arbitrary units. should figure out the actual pizles on the device
+      this.size = size;
+      this.pieceSize = pieceSize;
+      this.pieceSpeed = pieceSpeed;
+
+      this.UPS = CPS / this.size; // unit pixel size
+      this.PPS = this.UPS * this.pieceSize; // piece pixel size
+
+      this.paint = function(){
+        // wipe board
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, CPS, CPS);
+
+        // paint all the pieces
+        for(var i = 0; i < CGS.pieces.length; i++){
+          var piece = CGS.pieces[i];
+          ctx.fillStyle = piece.color;
+          ctx.fillRect(piece.offset.x*this.UPS, piece.offset.y*this.UPS, this.PPS, this.PPS)
+        }
+      }
+    }
+
+    function GameState(timestamp, board, players, pieces){
+      this.timestamp = timestamp;
+      this.board = board;
+      this.players = players;
+      this.pieces = pieces;
+
+      this.updatePlayerList = function(){
+        var playersElem = document.getElementById('players');
+
+        // wipe clean
+        while(playersElem.hasChildNodes()){
+          playersElem.removeChild(playersElem.lastChild);
+        }
+
+        // add players
+        var html = "";
+        var orderedPlayers = this.players.sort((a,b) => a.id > b.id ? 1 : -1); // sort by id asc
+        for(var i = 0; i < orderedPlayers.length; i++){
+          var player = orderedPlayers[i];
+          var color = this.pieces.filter(p => p.playerId == player.id)[0].color;
+          html = html + "\
+<div class='player-info'>\
+  <div class='player-info-color' style='background-color:" + color + ";'></div>\
+  <div class='player-info-name'>" + player.name + "</div>\
+</div>\
+          ";
+        }
+
+        playersElem.innerHTML = html;
+      }
+    }
+  </script>
+
+  <script name='main'>
   // auto focus on name input
   var input = document.getElementById('player-name');
   input.focus();
@@ -24,18 +157,21 @@
 
   // listen for key action
   document.onkeydown = function(e){
-    if(e.keyCode == 38) {movePiece('u');}
-    if(e.keyCode == 39) {movePiece('r');}
-    if(e.keyCode == 40) {movePiece('d');}
-    if(e.keyCode == 37) {movePiece('l');}
+    if(arrowKeysOn){
+      if(e.keyCode == 38) {movePiece('u');}
+      if(e.keyCode == 39) {movePiece('r');}
+      if(e.keyCode == 40) {movePiece('d');}
+      if(e.keyCode == 37) {movePiece('l');}
+    }
   }
 
   // init web socket
-  var ws = new WebSocket('ws://localhost:1234', 'echo-protocol');
+  var ws = new WebSocket('ws://192.168.1.11:8080', 'echo-protocol'); // my hardcoded ip address
 
   // init global variables
   CGS = new GameState(); // client/current game state
   var CPS = 700; // canvas pixel size: equal to the <canvas> width and height attribute values (their the same)
+  var arrowKeysOn = false;
   var canvas = document.getElementById('canvas');
   var ctx = canvas.getContext('2d');
 
@@ -46,13 +182,14 @@
         var SGS = msgObj.GS; // server game state
 
         // put together client/current game state
-        var board = new Board(SGS.board.size, SGS.board.pieceSize);
+        var board = new Board(SGS.board.size, SGS.board.pieceSize, SGS.board.pieceSpeed);
         var players = SGS.players.map(p => new Player(p.id, p.name));
         var pieces = SGS.pieces.map(p => new Piece(p.playerId, new Offset(p.offset.x, p.offset.y), p.color));
         CGS = new GameState(SGS.timestamp, board, players, pieces);
 
         // paint board
         CGS.board.paint();
+        CGS.updatePlayerList();
 
       break;
     }
@@ -64,6 +201,7 @@
     var msgObj = {'msgType': 'add-player', 'name': name};
     ws.send(JSON.stringify(msgObj));
     document.getElementById('player-name-markup').remove();
+    arrowKeysOn = true;
   }
 
   function movePiece(direction){

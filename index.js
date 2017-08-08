@@ -1,8 +1,10 @@
 // include modules
 var http = require('http');
 var websocket = require('websocket');
+var fs = require('fs');
 
 // init app scope vars
+var theHtml = null;
 var haveConnected = 0;
 var clients = [];
 var GS = new GameState([], []);
@@ -18,13 +20,6 @@ function Client(id, connection){
   this.id = id;
   this.connection = connection;
 }
-
-
-
-
-
-
-
 
 function Player(id, name){
   this.id = id;
@@ -48,6 +43,7 @@ function Board(){
   // these are arbitrary units. should figure out the actual pizles on the device
   this.size = 100;
   this.pieceSize = 5;
+  this.pieceSpeed = 2;
 
   this.getRandomStartingOffset = function(){
     var maxX = this.size - this.pieceSize;
@@ -85,8 +81,9 @@ function GameState(players, pieces){
     this.updateTimestamp();
   }
 
-  this.removePlayer = function(player){
-    this.players = this.players.filter(e => e.id != player.id);
+  this.removePlayer = function(playerId){
+    this.players = this.players.filter(p => p.id != playerId);
+    this.pieces = this.pieces.filter(p => p.playerId != playerId);
     this.updateTimestamp();
   }
 
@@ -96,22 +93,21 @@ function GameState(players, pieces){
     this.updateTimestamp();
   }
 
-  this.tryMovePiece = function(playerId, direction){
+  this.tryMovePiece = function(playerId, direction, speed = null){
+    var s = speed || this.board.pieceSpeed;
     var cp = this.pieces.filter(p => p.playerId == playerId)[0]; // current piece
     var co = cp.offset; // current offset
     var to = new Offset(); // target offset
 
     switch(direction){
       case 'u':
-        to.x = co.x;     to.y = co.y - 1; break;
+        to.x = co.x;     to.y = co.y - s; break;
       case 'r':
-        to.x = co.x + 1; to.y = co.y;     break;
+        to.x = co.x + s; to.y = co.y;     break;
       case 'd':
-        to.x = co.x;     to.y = co.y + 1; break;
+        to.x = co.x;     to.y = co.y + s; break;
       case 'l':
-        to.x = co.x - 1; to.y = co.y;     break;
-      default:
-        logStuff("Error: Invalid direction supplied to tryMovePiece()");
+        to.x = co.x - s; to.y = co.y;     break;
     }
 
     var corners = this.board.calculateCorners(to);
@@ -119,6 +115,9 @@ function GameState(players, pieces){
                                          (c.y < 0) || (c.y > this.board.size));
     if (badCorners.length == 0){
       this.updatePiece(new Piece(cp.playerId, to, cp.color));
+    }
+    else if (s > 1){
+      this.tryMovePiece(playerId, direction, s-1);
     }
   }
 
@@ -133,26 +132,20 @@ function GameState(players, pieces){
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// get index.html ready with fs
+fs.readFile('./index.html', function(err, html){
+  if (err) { throw err; }
+  theHtml = html;
+});
 
 // create a webserver
-var httpServer = http.createServer(function (req, resp){});
-httpServer.listen(1234, '127.0.0.1', function(){
-    logStuff('Server running at 127.0.0.1:1234');
+var httpServer = http.createServer(function (req, resp){
+  resp.writeHeader(200, {'Content-Type': 'text/html'});
+  resp.write(theHtml);
+  resp.end();
+});
+httpServer.listen(8080, '0.0.0.0', function(){
+    logStuff('Server running at 0.0.0.0:8080');
 });
 
 // create web socket server
@@ -166,8 +159,11 @@ wsServer.on('request', function(r){
   var id = haveConnected++;
   clients.push(new Client(id, connection));
   
-  logStuff('Connection accepted [' + id + ']');
-  logStuff('Active connections: ' + clients.length);
+  // logStuff('Connection accepted [' + id + ']');
+  // logStuff('Active connections: ' + clients.length);
+
+  GS.updateTimestamp();
+  GS.pushIfNew();
 
   connection.on('message', function(msg){
     var msgObj = JSON.parse(msg.utf8Data);
@@ -189,7 +185,7 @@ wsServer.on('request', function(r){
 
   connection.on('close', function(reasonCode, description){
     clients = clients.filter(e => e.id != id);
-    // logStuff('Connection closed [' + id + ']');
-    // logStuff('Active connections: ' + clients.length);
+    GS.removePlayer(id);
+    GS.pushIfNew();
   });
 });

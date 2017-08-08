@@ -36,12 +36,33 @@ Phase Three
 
 Don't Forget To... 
 =========================
-- Check that name is not null on update player name
-- Remove player/piece when connection closes
-- adjust speed of movement (move more than a unit at a time)
+- [COMPLETE] Check that name is not null on update player name
+- [COMPLETE] Remove player/piece when connection closes
+- [COMPLETE] adjust speed of movement (move more than a unit at a time)
 - Add button to rejoin
 - maybe space makes you bigger
-- get server to return index.html so I can browse to it from another machine.
-- Show names
+- [COMPLETE] get server to return index.html so I can browse to it from another machine.
+- [COMPLETE] Show names
 - Add chat
-- board should be live in the back while name prompt is up (it is but it needs to get started)
+- [Complete] board should be live in the back while name prompt is up (it is but it needs to get started)
+- show latency (maybe not all of these) (might need some sort of token to know the response is for the action YOU sent in)
+  - my immediate latency
+  - my average latency
+  - server immediate average latency
+  - server average overal average latency
+- some simple instructions to user arrow keys for moving the block around
+  - maybe a nice greenish banner right below the canvas that fades away after a timeout?
+
+
+
+Local network setup for testing
+=========================
+This works. Not sure why yet.
+- node is serving @ 0.0.0.0:8080
+  - ex: httpServer.listen(8080, '0.0.0.0', function(){logStuff('Server running at 0.0.0.0:8080');});
+- Machine running node can navigate to application via localhost:8080 or 127.0.0.1:8080 or (own ip):8080
+- iPad can navigate to application via (serving machines network ip):8080
+  - ex 192.168.1.11:8080
+- can find machines network ip by opening powershell typing IPConfig and looking for IPv4 address
+- html page web socket needs to be hardcoded to server ip 
+  - ex: var ws = new WebSocket('ws://192.168.1.11:8080', 'echo-protocol');
