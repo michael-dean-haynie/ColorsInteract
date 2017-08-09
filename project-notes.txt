@@ -43,16 +43,16 @@ Don't Forget To...
 - maybe space makes you bigger
 - [COMPLETE] get server to return index.html so I can browse to it from another machine.
 - [COMPLETE] Show names
-- Add chat
+- [Not gonna do this] Add chat
 - [Complete] board should be live in the back while name prompt is up (it is but it needs to get started)
-- show latency (maybe not all of these) (might need some sort of token to know the response is for the action YOU sent in)
+- [Complete]show latency (maybe not all of these) (might need some sort of token to know the response is for the action YOU sent in)
   - my immediate latency
   - my average latency
   - server immediate average latency
   - server average overal average latency
 - [COMPLETE] some simple instructions to user arrow keys for moving the block around
   - maybe a nice greenish banner right below the canvas that fades away after a timeout?
-- pretty up name input
+- [COMPLETE]pretty up name input
 
 
 
