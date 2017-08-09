@@ -121,9 +121,9 @@ function GameState(players, pieces){
     }
   }
 
-  this.pushIfNew = function(){
+  this.pushIfNew = function(reqTimestamp = null){
     if(lastPush == null || lastPush < this.timestamp){
-      var pushObj = {'msgType': 'new-game-state', 'GS': this};
+      var pushObj = {'msgType': 'new-game-state', 'GS': this, 'reqTimestamp': reqTimestamp};
       for(var i = 0; i < clients.length; i++){
         var client = clients[i];
         client.connection.sendUTF(JSON.stringify(pushObj));
@@ -174,13 +174,14 @@ wsServer.on('request', function(r){
         break;
       case 'move-piece':
         GS.tryMovePiece(id, msgObj.direction)
+
         break;
       case 'chat':
         // do things
         break;
     }
     
-      GS.pushIfNew();
+      GS.pushIfNew(msgObj.reqTimestamp);
   });
 
   connection.on('close', function(reasonCode, description){

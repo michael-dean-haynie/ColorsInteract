@@ -13,10 +13,15 @@
       margin:0;
       background-color: rgb(119,199,224);
     }
-    .canvas-container{
+    .main-container{
       padding:20px;
       text-align:center;
       padding-top:50px;
+    }
+
+    .center-container{
+      display:inline-block;
+      width:700px;
     }
 
     #canvas{
@@ -26,19 +31,29 @@
       margin-bottom: 20px;
     }
 
-    #player-name-markup{
-      text-align:center;
+    .banner{
       position:fixed;
       top:250px;
       width:100%;
       height:150px;
-      padding-top:70px;
-      box-sizing:border-box;
       background-color:rgba(18, 130, 165, .5);
     }
+
+    .banner-content{
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    #instructions{
+      display:none;
+      font-weight:bolder;
+    }
+
     .info{
       display:inline-block;
-      width:700px;
+      width:100%;
       text-align:left;
     }
 
@@ -58,25 +73,88 @@
     .player-info .player-info-name{
       display:inline-block;
     }
+
+    #latency{
+      position:relative;
+      top:-25px;
+      text-align:right;
+      font-size:10px;
+    }
   </style>
 </head>
 <body>
-  <div id='player-name-markup'>
-    <form id='player-name-form' onsubmit='addPlayer(); return false;'>
-      <input id='player-name' type='text' placeholder='What&#39;s your name?' required>
-    </form>
-  </div>
-
-  <div class='canvas-container'>
-    <div class='info'>
-      <div id='players'>
+  <div class='banner' id='initial-banner'>
+    <div class='banner-content'>
+      <form id='player-name-form' onsubmit='addPlayer(); return false;'>
+        <input id='player-name' type='text' placeholder='What&#39;s your name?' required>
+      </form>
+      <div id="instructions">
+        <p>Use the arrow keys to move!</p>
       </div>
     </div>
-    <canvas id='canvas' height='700' width='700'></canvas>
+  </div>
+
+  <div class='main-container'>
+    <div class='center-container'>
+      <div class='info'><div id='players'></div></div>
+      <canvas id='canvas' height='700' width='700'></canvas>
+      <div id="latency" class='info'>
+        <span>
+          Latency(ms):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          Immediate(<span id='late-immediate'>0.00</span>)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          5-sec-avg(<span id='late-avg'>0.00</span>)
+        </span>
+      </div>
+      <!-- <div class='info'>Test text</div> -->
+    </div>
   </div>
 
   <!-- <script src='./client-assets/custom-types.js'></script> -->
   <script name='custom-types'>
+    //to round to n decimal places
+    // https://stackoverflow.com/questions/14968615/rounding-to-the-nearest-hundredth-of-a-decimal-in-javascript
+    function round(num, places) {
+        var multiplier = Math.pow(10, places);
+        return Math.round(num * multiplier) / multiplier;
+    }
+
+    // format ms to \d\.\d\d
+    // https://stackoverflow.com/questions/149055/how-can-i-format-numbers-as-dollars-currency-string-in-javascript
+    function formatMS(n){
+      return n.toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
+    }
+
+    function LateRecord(reqTS, resTS){
+      this.reqTS = reqTS;
+      this.resTS = resTS;
+
+      this.calc = function(){
+        return this.resTS - this.reqTS;
+      }
+    }
+
+    function LateRecordDB(immediateDisplay, avgDisplay){
+      this.records = [];
+      this.immediateDisplay = immediateDisplay;
+      this.avgDisplay = avgDisplay;
+
+      this.addRecord = function(record){
+        this.records.push(record);
+        this.updateDisplays();
+      }
+
+      this.updateDisplays = function(){
+        var il = this.records.sort((a,b) => a.reqTS < b.reqTS ? 1 : -1)[0].calc();
+
+        var recentRecords = this.records.filter(r => r.reqTS > (Date.now() - 5000));
+        var sum = recentRecords.map(r => r.calc()).reduce((a,b) => a + b);
+        var al = sum/recentRecords.length;
+
+        document.getElementById(this.immediateDisplay).innerHTML = formatMS(round(il, 2));
+        document.getElementById(this.avgDisplay).innerHTML = formatMS(round(al, 2));
+      }
+    }
+
     function Player(id, name){
       this.id = id;
       this.name = name;
@@ -163,20 +241,32 @@
       if(e.keyCode == 40) {movePiece('d');}
       if(e.keyCode == 37) {movePiece('l');}
     }
+    if(!userHasMoved && arrowKeysOn){
+      userHasMoved = true;
+      document.getElementById('initial-banner').remove();
+    }
   }
 
   // init web socket
-  var ws = new WebSocket('ws://192.168.1.11:8080', 'echo-protocol'); // my hardcoded ip address
+  var ws = new WebSocket('ws://192.168.1.10:8080', 'echo-protocol'); // my hardcoded ip address
 
   // init global variables
   CGS = new GameState(); // client/current game state
   var CPS = 700; // canvas pixel size: equal to the <canvas> width and height attribute values (their the same)
   var arrowKeysOn = false;
+  var userHasMoved = false;
   var canvas = document.getElementById('canvas');
   var ctx = canvas.getContext('2d');
+  var lateRecordDB = new LateRecordDB('late-immediate', 'late-avg');
 
   ws.addEventListener("message", function(e) {
     var msgObj = JSON.parse(e.data);
+
+    // record latency
+    if (null != msgObj.reqTimestamp){
+      lateRecordDB.addRecord( new LateRecord(msgObj.reqTimestamp, Date.now()));
+    }
+
     switch(msgObj.msgType){
       case 'new-game-state':
         var SGS = msgObj.GS; // server game state
@@ -200,12 +290,14 @@
     var name = document.getElementById('player-name').value;
     var msgObj = {'msgType': 'add-player', 'name': name};
     ws.send(JSON.stringify(msgObj));
-    document.getElementById('player-name-markup').remove();
+    document.getElementById('player-name-form').remove();
+    document.getElementById('instructions').style.display = 'inline-block';
     arrowKeysOn = true;
   }
 
   function movePiece(direction){
-    var msgObj = {'msgType': 'move-piece', 'direction': direction};
+    var reqTimestamp = Date.now();
+    var msgObj = {'msgType': 'move-piece', 'direction': direction, 'reqTimestamp': reqTimestamp};
     ws.send(JSON.stringify(msgObj));
   }
 

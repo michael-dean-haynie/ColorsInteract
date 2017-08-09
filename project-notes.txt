@@ -50,8 +50,9 @@ Don't Forget To...
   - my average latency
   - server immediate average latency
   - server average overal average latency
-- some simple instructions to user arrow keys for moving the block around
+- [COMPLETE] some simple instructions to user arrow keys for moving the block around
   - maybe a nice greenish banner right below the canvas that fades away after a timeout?
+- pretty up name input
 
 
 
